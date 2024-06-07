@@ -89,24 +89,6 @@ def app():
                         oclc_number = title.get('oclcNumber', '')
                         cover_image = None
 
-                        # for isbn in isbns:
-                        #     # Call the longitood.com API to get the book cover URL https://github.com/w3slley/bookcover-api
-                        #     api_url = f"http://bookcover.longitood.com/bookcover/{isbn}"
-                        #     response = requests.get(api_url)
-                        #     if response.status_code == 200:
-                        #         cover_url = response.text.split('"url":"')[1].split('"}')[0]
-                        #         cover_image = Image.open(BytesIO(requests.get(cover_url).content))
-                        #         cover_image = cover_image.resize((750, 1125), resample=Image.BICUBIC)
-                        #     if response.status_code =! 200:
-                        #         api_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}"
-                        #         # psuedo code
-                        #         # look for "thumbnail": 
-                        #         # then take url and
-                        #         cover_url = response.text.split('"url":"')[1].split('"}')[0]
-                        #         cover_image = Image.open(BytesIO(requests.get(cover_url).content))
-                        #         cover_image = cover_image.resize((750, 1125), resample=Image.BICUBIC)
-                        #         break  # Exit the loop if a cover image is found
-
                         # Define the dimensions as variables
                         cover_width = 200
                         cover_height = 300
@@ -130,7 +112,7 @@ def app():
                                         cover_url = data['items'][0]['volumeInfo']['imageLinks'].get('thumbnail')
                                         if cover_url:
                                             cover_image = Image.open(BytesIO(requests.get(cover_url).content))
-                                            cover_image = cover_image.resize((cover_width, cover_height), resample=Image.BICUBIC)
+                                            #cover_image = cover_image.resize((cover_width, cover_height), resample=Image.BICUBIC)
                                             break  # Exit the loop if a cover image is found
 
                         if cover_image is None:
