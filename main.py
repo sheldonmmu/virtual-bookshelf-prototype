@@ -7,8 +7,6 @@ from oauthlib.oauth2 import BackendApplicationClient
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
-import os
-import base64
 
 CLIENT_ID = st.secrets["client_id"]
 CLIENT_SECRET = st.secrets["client_secret"] # OCLC API endpoints
