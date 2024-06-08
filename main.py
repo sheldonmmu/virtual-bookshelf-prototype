@@ -1,17 +1,17 @@
 import streamlit as st
 import requests
-from oauthlib.oauth2 import BackendApplicationClient
+from requests.exceptions import ConnectTimeout, RequestException
 from requests.auth import HTTPBasicAuth
 from requests_oauthlib import OAuth2Session
+from oauthlib.oauth2 import BackendApplicationClient
 from datetime import datetime, timedelta
-import base64
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+import os
+import base64
 
 CLIENT_ID = st.secrets["client_id"]
-CLIENT_SECRET = st.secrets["client_secret"]
-
-# OCLC API endpoints
+CLIENT_SECRET = st.secrets["client_secret"] # OCLC API endpoints
 TOKEN_URL = 'https://oauth.oclc.org/token'
 NEW_TITLES_URL = 'https://discovery.api.oclc.org/new-titles'
 
@@ -27,7 +27,7 @@ def app():
             return base64.b64encode(img_file.read()).decode()
 
     # Path to your local image
-    image_path = "logo.png"
+    image_path = "assets\logo.png"
     alt_text = "MMU Library"
 
     # Get the base64 encoded image
@@ -40,8 +40,7 @@ def app():
         <h1 style="margin: 0;">New Books</h1>
     </div>
     """
-    
-    # Render the HTML in Streamlit
+       # Render the HTML in Streamlit
     st.markdown(html_code, unsafe_allow_html=True)
 
     # Step 1: Get an access token using oauth library
@@ -59,7 +58,7 @@ def app():
             'Accept': 'application/json'
         }
         params = {
-            'limit': 48,
+            'limit': 50,
             'startDate': (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
             'heldBySymbol': ['U@M'],
             'itemType': 'book',
@@ -78,11 +77,11 @@ def app():
             print("briefRecords found in the response.")
             row_count = 0  # Keep track of the current row
 
-            for row_count in range(16):  # Iterate over 10 rows
-                cols = st.columns(3)  # Create 3 columns per row
+            for row_count in range(8):  # Iterate over 8 rows
+                cols = st.columns(6)  # Create 6 columns per row
 
-                for col_count in range(3):  # Iterate over 3 columns
-                    index = row_count * 3 + col_count
+                for col_count in range(6):  # Iterate over 6 columns
+                    index = row_count * 6 + col_count
                     if index < len(new_titles_data['briefRecords']):
                         title = new_titles_data['briefRecords'][index]
                         isbns = title.get('isbns', [])
@@ -90,55 +89,44 @@ def app():
                         cover_image = None
 
                         # Define the dimensions as variables
-                        cover_width = 200
-                        cover_height = 300
+                        cover_width = 128
+                        cover_height = 184
 
                         for isbn in isbns:
-                            # Call the longitood.com API to get the book cover URL
-                            api_url = f"http://bookcover.longitood.com/bookcover/{isbn}"
-                            response = requests.get(api_url)
-                            if response.status_code == 200:
-                                cover_url = response.text.split('"url":"')[1].split('"}')[0]
-                                cover_image = Image.open(BytesIO(requests.get(cover_url).content))
-                                cover_image = cover_image.resize((cover_width, cover_height), resample=Image.BICUBIC)
-                                break  # Exit the loop if a cover image is found
-                            else:
+                            try:
                                 # If the longitood.com API fails, try the Google Books API
                                 api_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}"
-                                response = requests.get(api_url)
-                                if response.status_code == 200:
-                                    data = response.json()
-                                    if 'items' in data and 'volumeInfo' in data['items'][0] and 'imageLinks' in data['items'][0]['volumeInfo']:
-                                        cover_url = data['items'][0]['volumeInfo']['imageLinks'].get('thumbnail')
-                                        if cover_url:
-                                            cover_image = Image.open(BytesIO(requests.get(cover_url).content))
-                                            #cover_image = cover_image.resize((cover_width, cover_height), resample=Image.BICUBIC)
-                                            break  # Exit the loop if a cover image is found
+                                response = requests.get(api_url, timeout=5)  # Set a timeout of 5 seconds
+                                response.raise_for_status()  # Raise an exception if the request failed
+                                data = response.json()
+                                if 'items' in data and 'volumeInfo' in data['items'][0] and 'imageLinks' in data['items'][0]['volumeInfo']:
+                                    cover_url = data['items'][0]['volumeInfo']['imageLinks'].get('thumbnail')
+                                    if cover_url:
+                                        cover_image = requests.get(cover_url).content
+                                        break  # Exit the loop if a cover image is found
+                            except (ConnectTimeout, RequestException):
+                                print(f"Error occurred while fetching cover image from Google Books API for ISBN: {isbn}")
 
                         if cover_image is None:
-                            # If no cover image is found, use the default image
-                            default_cover_url = "https://source.unsplash.com/200x300/?lines"
-                            cover_image = Image.open(BytesIO(requests.get(default_cover_url).content))
-                            cover_image = cover_image.resize((200, 300), resample=Image.BICUBIC)
+                            default_image_path = "assets/default_books.jpg"
+                            if os.path.exists(default_image_path):
+                                with open(default_image_path, 'rb') as f:
+                                    cover_image = f.read()
 
-                        # Encode the cover image data as a base64 string
-                        buffer = BytesIO()
-                        cover_image.save(buffer, format='PNG')
-                        cover_image_data = buffer.getvalue()
-                        cover_image_base64 = base64.b64encode(cover_image_data).decode('utf-8')
-
-                        # Display the book cover with a hyperlink
+                        # Define oclc_url here
                         oclc_url = f"https://mmu.on.worldcat.org/oclc/{oclc_number}"
+
+                        # Display the book cover with title overlay
                         with cols[col_count]:
                             st.markdown(f"""
                                 <div style="position: relative; padding: 10px 0;">
                                 <a href="{oclc_url}">
-                                    <img src="data:image/png;base64,{cover_image_base64}" alt="Book Cover" style="width: 100%;">
+                                <img src="data:image/jpeg;base64,{base64.b64encode(cover_image).decode('utf-8')}" alt="Book Cover" style="width: 100%;">
                                 </a>
-                                <div style="position: absolute; bottom: 10px; left: 0; right: 0; background-color: rgba(255, 255, 255, 0.9); padding: 5px; text-align: left; width: 100%; max-width: 200px; margin: 0 auto; height: 100px; display: flex; flex-direction: column; justify-content: flex-start;">
-                                    <a href="{oclc_url}" style="color: black; text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
-                                    {(title.get('title', 'N/A')[:60] + '...' if len(title.get('title', 'N/A')) > 60 else title.get('title', 'N/A'))}
-                                    </a>
+                                <div style="position: absolute; bottom: 10px; left: 0; right: 0; background-color: rgba(255, 255, 255, 0.8); padding: 5px; text-align: left; width: 100%; max-width: 128px; margin: 0 auto; height: 100px; display: flex; flex-direction: column; justify-content: flex-start;">
+                                <a href="{oclc_url}" style="color: black; text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                                {(title.get('title', 'N/A')[:60] + '...' if len(title.get('title', 'N/A')) > 60 else title.get('title', 'N/A'))}
+                                </a>
                                 </div>
                                 </div>
                             """, unsafe_allow_html=True)
