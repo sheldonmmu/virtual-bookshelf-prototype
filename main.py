@@ -137,7 +137,7 @@ def app():
                                 <a href="{oclc_url}">
                                 <img src="data:image/jpeg;base64,{base64.b64encode(cover_image).decode('utf-8')}" alt="Book Cover" style="width: 100%;">
                                 </a>
-                                <div style="position: absolute; bottom: 10px; left: 0; right: 0; background-color: rgba(255, 255, 255, 0.8); padding: 5px; text-align: left; width: 100%; max-width: 128px; margin: 0 auto; height: 100px; display: flex; flex-direction: column; justify-content: flex-start;">
+                                <div style="position: absolute; bottom: 10px; left: 0; right: 0; background-color: rgba(255, 255, 255, 0.8); padding: 5px; text-align: left; width: 100%; max-width: 128px; margin: 0 auto; height: 60px; display: flex; flex-direction: column; justify-content: flex-start;">
                                 <a href="{oclc_url}" style="color: black; text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
                                 {(title.get('title', 'N/A')[:60] + '...' if len(title.get('title', 'N/A')) > 60 else title.get('title', 'N/A'))}
                                 </a>
