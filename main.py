@@ -1,5 +1,3 @@
-# https://virtual-bookshelf-prototype.streamlit.app/
-
 import streamlit as st
 import requests
 from requests.exceptions import ConnectTimeout, RequestException
@@ -7,16 +5,14 @@ from requests.auth import HTTPBasicAuth
 from requests_oauthlib import OAuth2Session
 from oauthlib.oauth2 import BackendApplicationClient
 from datetime import datetime, timedelta
+import random
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
 import base64
 
 CLIENT_ID = st.secrets["client_id"]
-CLIENT_SECRET = st.secrets["client_secret"] 
-GOOGLE_API_KEY = st.secrets["google_api_key"]
-
-# OCLC API endpoints
+CLIENT_SECRET = st.secrets["client_secret"]  # OCLC API endpoints
 TOKEN_URL = 'https://oauth.oclc.org/token'
 NEW_TITLES_URL = 'https://discovery.api.oclc.org/new-titles'
 
@@ -24,7 +20,7 @@ NEW_TITLES_URL = 'https://discovery.api.oclc.org/new-titles'
 def app():
     # browser tab config
     st.set_page_config(page_title="New Books", page_icon="🔖")
-    
+
     # logo and page title section
     # Function to read and encode the image
     def get_image_as_base64(image_path):
@@ -45,7 +41,7 @@ def app():
         <h1 style="margin: 0;">New Books</h1>
     </div>
     """
-       # Render the HTML in Streamlit
+    # Render the HTML in Streamlit
     st.markdown(html_code, unsafe_allow_html=True)
 
     # Step 1: Get an access token using oauth library
@@ -100,7 +96,7 @@ def app():
                         for isbn in isbns:
                             try:
                                 # If the longitood.com API fails, try the Google Books API
-                                api_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}&key={GOOGLE_API_KEY}"
+                                api_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}"
                                 response = requests.get(api_url, timeout=5)  # Set a timeout of 5 seconds
                                 response.raise_for_status()  # Raise an exception if the request failed
                                 data = response.json()
@@ -111,12 +107,25 @@ def app():
                                         break  # Exit the loop if a cover image is found
                             except (ConnectTimeout, RequestException):
                                 print(f"Error occurred while fetching cover image from Google Books API for ISBN: {isbn}")
-                        
+
+                        # Fallback to default image if no cover image is found
                         if cover_image is None:
-                            default_image_path = "default_books.jpg"
+                            random_image_index = random.randint(1, 5)
+                            default_image_path = f"default_book_{random_image_index}.jpg"
+                            print(f"Trying to use default image: {default_image_path}")
                             if os.path.exists(default_image_path):
-                                with open(default_image_path, 'rb') as f:
-                                    cover_image = f.read()
+                                try:
+                                    with open(default_image_path, 'rb') as f:
+                                        cover_image = f.read()
+                                except Exception as e:
+                                    print(f"Error reading default image {default_image_path}: {e}")
+                            else:
+                                print(f"Default image {default_image_path} does not exist.")
+
+                        # Final fallback check before rendering
+                        if cover_image is None:
+                            st.error("Failed to load cover image. Please ensure default images are available.")
+                            continue  # Skip rendering this book if no image is found
 
                         # Define oclc_url here
                         oclc_url = f"https://mmu.on.worldcat.org/oclc/{oclc_number}"
@@ -128,24 +137,7 @@ def app():
                                 <a href="{oclc_url}">
                                 <img src="data:image/jpeg;base64,{base64.b64encode(cover_image).decode('utf-8')}" alt="Book Cover" style="width: 100%;">
                                 </a>
-                                <div style="
-                                    position: absolute; 
-                                    bottom: 10px; 
-                                    left: 0; 
-                                    right: 0; 
-                                    background-color: rgba(255, 255, 255, 0.8); 
-                                    padding: 5px; 
-                                    text-align: left; 
-                                    width: 100%; 
-                                    max-width: 128px; 
-                                    margin: 0 auto; 
-                                    height: 60px; 
-                                    overflow-wrap: break-word; 
-                                    word-break: break-word;
-                                    hyphens: auto;
-                                    display: flex; 
-                                    flex-direction: column; 
-                                    justify-content: flex-start;">
+                                <div style="position: absolute; bottom: 10px; left: 0; right: 0; background-color: rgba(255, 255, 255, 0.8); padding: 5px; text-align: left; width: 100%; max-width: 128px; margin: 0 auto; height: 100px; display: flex; flex-direction: column; justify-content: flex-start;">
                                 <a href="{oclc_url}" style="color: black; text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
                                 {(title.get('title', 'N/A')[:60] + '...' if len(title.get('title', 'N/A')) > 60 else title.get('title', 'N/A'))}
                                 </a>
