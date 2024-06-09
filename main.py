@@ -139,7 +139,10 @@ def app():
                                     width: 100%; 
                                     max-width: 128px; 
                                     margin: 0 auto; 
-                                    height: 100px; 
+                                    height: 60px; 
+                                    overflow-wrap: break-word; 
+                                    word-break: break-word;
+                                    hyphens: auto;
                                     display: flex; 
                                     flex-direction: column; 
                                     justify-content: flex-start;">
