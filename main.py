@@ -1,3 +1,5 @@
+# https://virtual-bookshelf-prototype.streamlit.app/
+
 import streamlit as st
 import requests
 from requests.exceptions import ConnectTimeout, RequestException
@@ -7,6 +9,8 @@ from oauthlib.oauth2 import BackendApplicationClient
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+import os
+import base64
 
 CLIENT_ID = st.secrets["client_id"]
 CLIENT_SECRET = st.secrets["client_secret"] # OCLC API endpoints
@@ -25,7 +29,7 @@ def app():
             return base64.b64encode(img_file.read()).decode()
 
     # Path to your local image
-    image_path = "assets\logo.png"
+    image_path = "logo.png"
     alt_text = "MMU Library"
 
     # Get the base64 encoded image
@@ -106,7 +110,7 @@ def app():
                                 print(f"Error occurred while fetching cover image from Google Books API for ISBN: {isbn}")
 
                         if cover_image is None:
-                            default_image_path = "assets/default_books.jpg"
+                            default_image_path = "default_books.jpg"
                             if os.path.exists(default_image_path):
                                 with open(default_image_path, 'rb') as f:
                                     cover_image = f.read()
